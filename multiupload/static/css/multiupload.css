@@ -11,9 +11,9 @@
  */
 
 body {
-    font-family: "Lucida Grande","DejaVu Sans","Bitstream Vera Sans",Verdana,Arial,sans-serif;
-    font-size: 12px;
-    line-height: 15px;
+    # font-family: "Lucida Grande","DejaVu Sans","Bitstream Vera Sans",Verdana,Arial,sans-serif;
+    # font-size: 12px;
+    # line-height: 15px;
 }
 
 h1 {
@@ -95,4 +95,19 @@ h1 {
 
 .preview img {
   max-width: 75px;
+}
+
+.btn-primary:hover, .btn-primary:active, .btn-primary.active, .btn-primary.disabled, .btn-primary[disabled]{
+    color: #fff !important;
+    background-color: #04c !important;
+}
+.btn-primary{
+    background-color: #ffffff !important;
+    border-width: 0px !important;
+    color: #0074a2 !important;
+
+    height: 32px !important;
+    line-height: 0px !important;
+    margin: 0 !important;
+    padding: 0px 10px 0px 10px !important;
 }
