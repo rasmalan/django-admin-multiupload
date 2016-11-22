@@ -1,0 +1,19 @@
+@charset 'UTF-8';
+
+.btn {
+    font-size: 13px;
+    font-weight: 400;
+    margin-left: 5px;
+    padding: 6px 10px;
+    text-decoration: none;
+    border: 0;
+    float: left;
+    border-radius: 0;
+    color:#0074a2;
+    background: white;
+    font-family: "Open Sans",sans-serif;
+    
+}
+.btn:hover .icon{
+    background-image:url("../img/glyphicons-halflings-white.png");
+}

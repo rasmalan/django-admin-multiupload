@@ -31,8 +31,9 @@
 {% block extrastyle %}{{ block.super }}
   <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}bootstrap/css/bootstrap.min.css" />
   <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}admin/css/forms.css" />
+  <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}bootstrap/css/buttons.css" />
   <!-- Bootstrap Image Gallery styles -->
-  <link rel="stylesheet" href="http://blueimp.github.com/Bootstrap-Image-Gallery/css/bootstrap-image-gallery.min.css">
+  <link rel="stylesheet" href="{{ STATIC_URL }}/css/bootstrap-image-gallery.min.css">
   <!-- CSS to style the file input field as button and adjust the Bootstrap progress bars -->
   <link rel="stylesheet" href="http://blueimp.github.com/jQuery-File-Upload/css/jquery.fileupload-ui.css">
 {% endblock %}
@@ -59,29 +60,27 @@
 {% endif %}{% endblock %}
 
 {% block content %}
-<a href="../{%if is_popup %}?pop=1{% endif %}">{% trans 'back' %}</a>
 
 <form id="fileupload" action="." method="POST" enctype="multipart/form-data">
     <div class="row fileupload-buttonbar">
         <div class="span7">
-            <span class="btn btn-success fileinput-button">
-                <i class="icon-plus icon-white"></i>
-                <span>{% trans 'Add files' %}</span>
+            <span class="btn-success fileinput-button btn">
+                <i class="icon-plus icon"></i>
+                <span>{% trans 'Añadir archivos' %}</span>
                 <input type="file" name="files[]" multiple="">
             </span>
             <button type="submit" class="btn btn-primary start">
-                <i class="icon-upload icon-white"></i>
-                <span>{% trans 'Start upload' %}</span>
+                <i class="icon-upload icon"></i>
+                <span>{% trans 'Comenzar subida' %}</span>
             </button>
             <button type="reset" class="btn btn-warning cancel">
-                <i class="icon-ban-circle icon-white"></i>
-                <span>{% trans 'Cancel upload' %}</span>
+                <i class="icon-ban-circle icon"></i>
+                <span>{% trans 'Cancelar subida' %}</span>
             </button>
             <button type="button" class="btn btn-danger delete">
-                <i class="icon-trash icon-white"></i>
-                <span>{% trans 'Delete' %}</span>
+                <i class="icon-trash icon"></i>
+                <span>{% trans 'Borrar' %}</span>
             </button>
-            <input type="checkbox" class="toggle">
         </div>
         <!-- The global progress information -->
         <div class="span5 fileupload-progress fade">
@@ -120,7 +119,7 @@
               <input type="text" name="title" placeholder="{%=locale.fileupload.titleLabel%}"/>
               {% if (!o.options.autoUpload) { %}
             <button style="display: none";>
-                <i class="icon-ban-circle icon-white"></i>
+                <i class="icon-ban-circle icon"></i>
                 <span>{%=locale.fileupload.start%}</span>
             </button>
             {% } %}</td>
@@ -129,7 +128,7 @@
         {% } %}
         <td class="cancel">{% if (!i) { %}
             <button class="btn btn-warning">
-                <i class="icon-warning-sign icon-white"></i>
+                <i class="icon-warning-sign icon"></i>
                 <span>{%=locale.fileupload.cancel%}</span>
             </button>
         {% } %}</td>
@@ -157,10 +156,10 @@
         {% } %}
         <td class="delete">
             <button class="btn btn-danger" data-type="{%=file.delete_type%}" data-url="{%=file.delete_url%}">
-                <i class="icon-trash icon-white"></i>
+                <i class="icon-trash icon"></i>
                 <span>{%=locale.fileupload.destroy%}</span>
             </button>
-            <input type="checkbox" name="delete" value="1">
+            <input type="checkbox" name="borrar" value="1">
         </td>
     </tr>
 {% } %}
@@ -196,10 +195,10 @@ window.locale = {
             "emptyResult": "{% trans 'Empty file upload result' %}"
         },
         "error": "{% trans 'Error' %}",
-        "start": "{% trans 'Start' %}",
-        "cancel": "{% trans 'Cancel' %}",
-        "destroy": "{% trans 'Delete' %}",
-        "titleLabel": "{% trans 'Title' %}"
+        "start": "{% trans 'Comenzar' %}",
+        "cancel": "{% trans 'Cancelar' %}",
+        "destroy": "{% trans 'Borrar' %}",
+        "titleLabel": "{% trans 'Título' %}"
     }
 };
 </script>
