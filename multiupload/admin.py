@@ -104,15 +104,20 @@ class MultiUploadAdmin(admin.ModelAdmin):
         return '%s_%s_multiupload_form' % (app_name, self.get_model_name())
 
     def get_urls(self, *args, **kwargs):
+        # multi_urls = patterns('')
         multi_urls = []
         if self.multiupload_list:
-            multi_urls += url(r'^multiupload/$',
+            multi_urls += [
+                url(r'^multiupload/$',
                     self.admin_site.admin_view(self.admin_upload_view),
                     name=self.get_multiupload_list_view_name())
+            ]
         if self.multiupload_form:
-            multi_urls += url(r'^(?P<id>\d+)/multiupload/$',
+            multi_urls += [
+                url(r'^(?P<id>\d+)/multiupload/$',
                     self.admin_site.admin_view(self.admin_upload_view),
-                    name=self.get_multiupload_form_view_name())
+                    name=self.get_multiupload_form_view_name()),
+            ]
         return multi_urls + super(MultiUploadAdmin, self).get_urls(*args,
                                                                    **kwargs)
 
