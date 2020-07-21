@@ -48,6 +48,11 @@ class MultiUploadAdmin(admin.ModelAdmin):
                                    "image/png", )
 
     multiupload_view_context = {}
+    
+    multiupload_s3_template = 'multiupload/upload_s3.html'
+    # Url post to generate signed post policy. {file_name, mine_type}
+    multiupload_s3_poicy_generator_url = 'api/s3policy'
+    multiupload_s3_object_generator_url = 'api/objectGenerator'
 
     @property
     def upload_options(self):
@@ -277,10 +282,20 @@ class MultiUploadAdmin(admin.ModelAdmin):
             }
             context.update(self.get_upload_context())
 
+            direct_upload = self.direct_s3_multiupload(request)
+            template = self.multiupload_template if not direct_upload else self.multiupload_s3_template
+            if direct_upload:
+                context['policy_generator_url'] = self.multiupload_s3_poicy_generator_url
+                context['object_generator_url'] = self.multiupload_s3_object_generator_url
+                context['delete_url'] = request.path + "?f="
+
             return render(request,
-                          self.multiupload_template,
-                          context,
-                          )
+                          template,
+                          context)
 
     def get_upload_context(self):
         return self.multiupload_view_context.copy()
+    
+    def direct_s3_multiupload(self, request):
+        # override it
+        return False

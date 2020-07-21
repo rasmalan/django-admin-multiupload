@@ -1,0 +1,365 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_modify %}
+{% load raw %}
+
+{% block title %}Multiupload {{ block.super }}{% endblock %}
+
+{% block extrahead %}{{ block.super }}
+  <!-- Shim to make HTML5 elements usable in older Internet Explorer versions -->
+  <!--[if lt IE 9]><script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+{% url 'admin:jsi18n' as jsi18nurl %}
+  <script type="text/javascript" src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>
+{{ media }}
+<script type="text/javascript" src="{{ STATIC_URL }}bootstrap/js/bootstrap.min.js" /></script>
+
+<!-- The XDomainRequest Transport is included for cross-domain file deletion for IE8+ -->
+<!--[if gte IE 8]><script src="{{ STATIC_URL }}jquery/jquery.xdr-transport.js"></script><![endif]-->
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.3.0/jquery.form.min.js" integrity="sha384-qlmct0AOBiA2VPZkMY3+2WqkHtIQ9lSdAsAn5RUJD/3vA5MKDgSGcdmIv4ycVxyn" crossorigin="anonymous"></script>
+
+{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+  <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}bootstrap/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}admin/css/forms.css" />
+  <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}bootstrap/css/buttons.css" />
+  <!-- Bootstrap Image Gallery styles -->
+  <link rel="stylesheet" href="{{ STATIC_URL }}/css/bootstrap-image-gallery.min.css">
+  <!-- CSS to style the file input field as button and adjust the Bootstrap progress bars -->
+  <link rel="stylesheet" href="{{ STATIC_URL }}/css/jquery.fileupload-ui2.css">
+  <style>
+    .fade-enter-active, .fade-leave-active {
+        transition: opacity .5s
+    }
+    .fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
+        opacity: 0
+    }
+    .progress.file {
+        width: 200px;
+    }
+  </style>
+
+{% endblock %}
+
+{% block coltype %}{% if ordered_objects %}colMS{% else %}colM{% endif %}{% endblock %}
+
+{% block bodyclass %}{{ opts.app_label }}-{{ opts.object_name.lower }} change-form{% endblock %}
+
+{% block breadcrumbs %}{% if not is_popup %}
+<div class="breadcrumbs">
+  {% if object %}
+     <a href="../../../../">{% trans "Home" %}</a> &rsaquo;
+     <a href="../../../">{{ app_label|capfirst|escape }}</a> &rsaquo;
+     <a href="../../">{{ opts.verbose_name_plural|capfirst }}</a> &rsaquo;
+     <a href="../">{{ object }}</a> &rsaquo;
+     {% trans "Multiupload" %}
+  {% else %}
+     <a href="../../../">{% trans "Home" %}</a> &rsaquo;
+     <a href="../../">{{ app_label|capfirst|escape }}</a> &rsaquo;
+     <a href="../">{{ opts.verbose_name_plural|capfirst }}</a> &rsaquo;
+     {% trans "Multiupload" %}
+  {% endif %}
+</div>
+{% endif %}{% endblock %}
+
+{% block content %}
+<div id="vue-app">
+    {% csrf_token %}
+        <div class="row fileupload-buttonbar">
+            <div class="span7">
+                <span class="btn-success fileinput-button btn">
+                    <i class="icon-plus icon"></i>
+                    <span>{% trans 'Añadir archivos' %}</span>
+                    <input type="file" name="files[]" multiple="multiple" ref="file" @change="setFiles()">
+                </span>
+                <button type="button" class="btn btn-primary start" @click="uploadAll()">
+                    <i class="icon-upload icon"></i>
+                    <span>{% trans 'Comenzar subida' %}</span>
+                </button>
+                <button type="reset" class="btn btn-warning cancel" @click="deleteAll()">
+                    <i class="icon-ban-circle icon"></i>
+                    <span>{% trans 'Cancelar subida' %}</span>
+                </button>
+                <button type="button" class="btn btn-danger delete" @click="deleteSelected()">
+                    <i class="icon-trash icon"></i>
+                    <span>{% trans 'Borrar' %}</span>
+                </button>
+            </div>
+        </div>
+        <!-- The loading indicator is shown during file processing -->
+        <div class="fileupload-loading"></div>
+        <br>
+        <!-- The table listing the files available for upload/download -->
+        <files-table-component :files="files"></files-table-component>
+
+</div>
+
+
+<script type="text/javascript">
+
+Vue.component('file-component', {
+    delimiters: ['[[', ']]'],
+    template:`
+        <tr class="template-upload">
+            <td class="preview"><span class=""></span></td>
+            <td class="name">
+                <span v-if="!creationResult">[[file.file.name]]</span>
+                <a v-else :href="creationResult.url" :title="creationResult.name" :download="creationResult.name" target="_blank">[[creationResult.name]]</a>
+            </td>
+            <td class="size"><span>[[humanFileSize(file.file.size, true)]]</span></td>
+            <td v-if="error" class="error" colspan="2"><span class="label label-important">[[locale.fileupload.error]]</span> [[locale.fileupload.errors[error] || error]]</td>
+            <td v-else-if="!complete">
+                <div class="progress progress-success progress-striped active file" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="bar" :style="{width: percentComplete + '%'}"></div></div>
+            </td>
+            <td v-if="!complete" class="start">
+                <!--<label>[[locale.fileupload.titleLabel]]</label>-->
+                <input type="text" name="title" :placeholder="locale.fileupload.titleLabel" v-model="title"/>
+            </td>
+            <td v-else colspan="2"></td>
+            <td class="cancel" v-if="!complete">
+                <button class="btn btn-warning" @click="$emit('remove', file)">
+                    <i class="icon-warning-sign icon"></i>
+                    <span>[[locale.fileupload.cancel]]</span>
+                </button>
+                <form v-if="signedPolicy" :action="signedPolicy.url" method="post" enctype="multipart/form-data" :id="'uploadForm' + index">
+                    <input v-for="(value, field) in signedPolicy.fields" type="hidden" :name="field" :value="value" />
+                    <input type="file" name="file" ref="fileinput" id="fileinput" style="display: none;"/>
+                </form>
+            </td>
+            <td colspan="1" v-if="complete"></td>
+            <td class="delete" v-if="complete">
+                <button class="btn btn-danger" @click="destroy()">
+                    <i class="icon-trash icon"></i>
+                    <span>[[locale.fileupload.destroy]]</span>
+                </button>
+                <input type="checkbox" name="borrar" v-model="selected">
+            </td>
+        </tr>
+    `,
+    props: ['file', 'index'],
+    data: function () {
+        return {
+            signedPolicy: null,
+            error: null,
+            percentComplete: 0,
+            inProgress: false,
+            complete: false,
+            title: '',
+            creationResult: null,
+            selected: false,
+            deleteUrl: '{{delete_url}}',
+            locale: {
+                "fileupload": {
+                    "errors": {
+                        "maxFileSize": "{% trans 'File is too big' %}",
+                        "minFileSize": "{% trans 'File is too small' %}",
+                        "acceptFileTypes": "{% trans 'Filetype not allowed' %}",
+                        "maxNumberOfFiles": "{% trans 'Max number of files exceeded' %}",
+                        "uploadedBytes": "{% trans 'Uploaded bytes exceed file size' %}",
+                        "emptyResult": "{% trans 'Empty file upload result' %}",
+                        "policyError": "{% trans 'Error creating s3 signed policy' %}"
+                    },
+                    "error": "{% trans 'Error' %}",
+                    "start": "{% trans 'Comenzar' %}",
+                    "cancel": "{% trans 'Cancelar' %}",
+                    "destroy": "{% trans 'Borrar' %}",
+                    "titleLabel": "{% trans 'Título' %}"
+                }
+            },
+        }
+    },
+    methods: {
+        getPolicy: function () {
+            if (this.complete || this.error) return
+            var file = this.$props.file.file
+            var token =  $('input[name="csrfmiddlewaretoken"]').attr('value')
+            var self = this
+            $.ajax({
+                type: 'POST',
+                contentType: "application/json",
+                url: '{{policy_generator_url}}',
+                data: JSON.stringify({
+                    "file_name": file.name,
+                    "mine_type": file.type
+                }),
+                headers: {
+                    'X-CSRF-Token': token 
+               },
+               success: function (data) {
+                    self.signedPolicy = data
+                    self.$nextTick(function() {
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(self.$props.file.file)
+                        self.$refs.fileinput.files = dataTransfer.files
+                        self.uploadFile()
+                    })
+               },
+               error: function (data) {
+                   if (data.responseText) {
+                       let error = JSON.parse(data.responseText)
+                       self.error = error.error
+                   }else{
+                    self.error = 'policyError'
+                   }
+               }
+            })
+        },
+        uploadFile: function () {
+            var self = this
+            $('#uploadForm' + self.index).ajaxForm({
+              headers: {  'Access-Control-Allow-Origin': '*' },
+    	        target: '#outputImage',
+    	        url: this.signedPolicy.url,
+    	        beforeSubmit: function () {
+
+    	        },
+    	        uploadProgress: function (event, position, total, percentComplete) {
+                    self.percentComplete = percentComplete
+    	        },
+    	        error: function (response, status, e) {
+                    self.error = 'error'
+    	        },
+    	        complete: function (xhr) {
+    	            if (xhr.status == 204)
+    	            {
+                          self.createObject()
+    	            }
+    	            else{  
+    	               	self.error = 'error'
+    	            }
+    	        }
+            });
+            $('#uploadForm' + self.index).submit();
+
+        },
+        createObject: function () {
+            var token =  $('input[name="csrfmiddlewaretoken"]').attr('value')
+            var self = this
+            $.ajax({
+                type: 'POST',
+                contentType: "application/json",
+                url: '{{object_generator_url}}',
+                data: JSON.stringify({
+                    "file_policy": self.signedPolicy,
+                    "title": self.title
+                }),
+                headers: {
+                    'X-CSRF-Token': token 
+               },
+               success: function (data) {
+                    self.inProgress = false
+                    self.complete = true
+                    self.creationResult = data
+               },
+               error: function (data) {
+                   if (data.responseText) {
+                       let error = JSON.parse(data.responseText)
+                       self.error = error.error
+                   }else{
+                    self.error = 'policyError'
+                   }
+               }
+            })
+        },
+        humanFileSize: function (bytes, si=false, dp=1) {
+            const thresh = si ? 1000 : 1024;
+
+            if (Math.abs(bytes) < thresh) {
+                return bytes + ' B';
+            }
+
+            const units = si 
+                ? ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'] 
+                : ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+            let u = -1;
+            const r = 10**dp;
+
+            do {
+                bytes /= thresh;
+                ++u;
+            } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
+
+
+            return bytes.toFixed(dp) + ' ' + units[u];
+        },
+        destroy: function() {
+            let self = this
+            $.ajax({
+                type: 'POST',
+                url: this.deleteUrl + this.creationResult.id,
+                success: function (data) {
+                    self.$parent.$parent.files.splice(self.$parent.$parent.files.indexOf(self.file), 1)
+                },
+                error: function (error) {
+
+                }
+            })
+        }   
+    },
+    computed: {
+        files_valid: function () {
+            return true
+        }
+    }
+})
+
+Vue.component('files-table-component', {
+    delimiters: ['[[' , ']]'],
+    template: `
+    <table role="presentation" class="table table-striped">
+            <transition-group name="fade" tag="tbody">
+                <file-component v-for="(file, index) in files" :file="file"
+                    @remove="onRemove"
+                    :key="file.name + '_' + file.key"
+                    :index="index"></file-component>
+            </transition-group>
+    </table>
+    `,
+    props: ['files'],
+    methods: {
+        onRemove: function (element) {
+            this.files.splice(this.files.indexOf(element), 1)
+        },
+        uploadAll: function () {
+            this.$children[0].$children.forEach(element => {
+                element.getPolicy()  
+            })
+        },
+        deleteSelected: function() {
+            this.$children[0].$children.forEach(element => {
+                if (element.selected) {
+                    element.destroy()
+                }  
+            })
+        }
+    }
+})
+
+var app = new Vue({
+    el: '#vue-app',
+    delimiters: ['[[' , ']]'],
+    data: {
+        files: []
+    },
+    methods: {
+        setFiles: function (event) {
+            Array.from(this.$refs.file.files).forEach(element => {
+                this.files.push({'key': Math.random().toString(36).substring(7), 'file': element})
+            })
+        },
+        uploadAll: function () {
+            this.$children[0].uploadAll()
+        },
+        deleteAll: function () {
+            this.files = []
+        },
+        deleteSelected: function() {
+            this.$children[0].deleteSelected()
+        }
+    }
+})
+
+</script>
+
+{% endblock %}
