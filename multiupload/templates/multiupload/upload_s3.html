@@ -118,7 +118,7 @@ Vue.component('file-component', {
             </td>
             <td v-else colspan="2"></td>
             <td class="cancel" v-if="!complete">
-                <button class="btn btn-warning" @click="$emit('remove', file)">
+                <button class="btn btn-warning" @click="$emit('remove', file, xhr)">
                     <i class="icon-warning-sign icon"></i>
                     <span>[[locale.fileupload.cancel]]</span>
                 </button>
@@ -149,6 +149,7 @@ Vue.component('file-component', {
             creationResult: null,
             selected: false,
             deleteUrl: '{{delete_url}}',
+            xhr: null,
             locale: {
                 "fileupload": {
                     "errors": {
@@ -206,13 +207,12 @@ Vue.component('file-component', {
             })
         },
         uploadFile: function () {
-            var self = this
-            $('#uploadForm' + self.index).ajaxForm({
+            let self = this
+            let form = $('#uploadForm' + self.index).ajaxForm({
               headers: {  'Access-Control-Allow-Origin': '*' },
     	        target: '#outputImage',
     	        url: this.signedPolicy.url,
-    	        beforeSubmit: function () {
-
+    	        beforeSubmit: function (arr, $form, opts) {
     	        },
     	        uploadProgress: function (event, position, total, percentComplete) {
                     self.percentComplete = percentComplete
@@ -231,6 +231,7 @@ Vue.component('file-component', {
     	        }
             });
             $('#uploadForm' + self.index).submit();
+            this.xhr = form.data('jqxhr')
 
         },
         createObject: function () {
@@ -297,9 +298,9 @@ Vue.component('file-component', {
             })
         }   
     },
-    computed: {
-        files_valid: function () {
-            return true
+    beforeDestroy: function() {
+        if (this.xhr) {
+            this.xhr.abort()
         }
     }
 })
@@ -311,14 +312,14 @@ Vue.component('files-table-component', {
             <transition-group name="fade" tag="tbody">
                 <file-component v-for="(file, index) in files" :file="file"
                     @remove="onRemove"
-                    :key="file.name + '_' + file.key"
+                    :key="file.file.name + '_' + file.key"
                     :index="index"></file-component>
             </transition-group>
     </table>
     `,
     props: ['files'],
     methods: {
-        onRemove: function (element) {
+        onRemove: function (element, xhr) {
             this.files.splice(this.files.indexOf(element), 1)
         },
         uploadAll: function () {
@@ -347,6 +348,7 @@ var app = new Vue({
             Array.from(this.$refs.file.files).forEach(element => {
                 this.files.push({'key': Math.random().toString(36).substring(7), 'file': element})
             })
+            this.$refs.file.files = new DataTransfer().files
         },
         uploadAll: function () {
             this.$children[0].uploadAll()
