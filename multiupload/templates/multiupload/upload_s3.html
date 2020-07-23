@@ -110,7 +110,10 @@ Vue.component('file-component', {
             <td class="size"><span>[[humanFileSize(file.file.size, true)]]</span></td>
             <td v-if="error" class="error" colspan="2"><span class="label label-important">[[locale.fileupload.error]]</span> [[locale.fileupload.errors[error] || error]]</td>
             <td v-else-if="!complete">
-                <div class="progress progress-success progress-striped active file" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="bar" :style="{width: percentComplete + '%'}"></div></div>
+                <div class="progress progress-success progress-striped active file" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div class="bar" :style="{width: percentComplete + '%'}"></div>
+                    <div v-if="isCalculating"><p>Calculating...</p></div>
+                </div>
             </td>
             <td v-if="!complete" class="start">
                 <!--<label>[[locale.fileupload.titleLabel]]</label>-->
@@ -149,6 +152,7 @@ Vue.component('file-component', {
             creationResult: null,
             selected: false,
             deleteUrl: '{{delete_url}}',
+            isCalculating: false,
             xhr: null,
             locale: {
                 "fileupload": {
@@ -159,7 +163,8 @@ Vue.component('file-component', {
                         "maxNumberOfFiles": "{% trans 'Max number of files exceeded' %}",
                         "uploadedBytes": "{% trans 'Uploaded bytes exceed file size' %}",
                         "emptyResult": "{% trans 'Empty file upload result' %}",
-                        "policyError": "{% trans 'Error creating s3 signed policy' %}"
+                        "policyError": "{% trans 'Error creating s3 signed policy' %}",
+                        "maxCuoteExceeded": "{% trans 'Max size cuote exceeded' %}"
                     },
                     "error": "{% trans 'Error' %}",
                     "start": "{% trans 'Comenzar' %}",
@@ -173,16 +178,18 @@ Vue.component('file-component', {
     methods: {
         getPolicy: function () {
             if (this.complete || this.error) return
-            var file = this.$props.file.file
-            var token =  $('input[name="csrfmiddlewaretoken"]').attr('value')
-            var self = this
+            let file = this.$props.file.file
+            let token =  $('input[name="csrfmiddlewaretoken"]').attr('value')
+            let self = this
+            this.isCalculating = true
             $.ajax({
                 type: 'POST',
                 contentType: "application/json",
                 url: '{{policy_generator_url}}',
                 data: JSON.stringify({
                     "file_name": file.name,
-                    "mine_type": file.type
+                    "mine_type": file.type,
+                    "file_size": file.size
                 }),
                 headers: {
                     'X-CSRF-Token': token 
@@ -193,6 +200,7 @@ Vue.component('file-component', {
                         const dataTransfer = new DataTransfer();
                         dataTransfer.items.add(self.$props.file.file)
                         self.$refs.fileinput.files = dataTransfer.files
+                        self.isCalculating = false
                         self.uploadFile()
                     })
                },
@@ -203,6 +211,7 @@ Vue.component('file-component', {
                    }else{
                     self.error = 'policyError'
                    }
+                   self.isCalculating = false
                }
             })
         },
