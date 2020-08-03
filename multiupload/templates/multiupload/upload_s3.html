@@ -149,6 +149,7 @@ Vue.component('file-component', {
             inProgress: false,
             complete: false,
             title: '',
+            duration: null,
             creationResult: null,
             selected: false,
             deleteUrl: '{{delete_url}}',
@@ -173,6 +174,21 @@ Vue.component('file-component', {
                     "titleLabel": "{% trans 'Título' %}"
                 }
             },
+        }
+    },
+    mounted: function () {
+        if (this.file.file.type.includes('video')) {
+            var video = document.createElement('video')
+            video.preload = 'metadata';
+            let self = this
+            video.onloadedmetadata = function() {
+                window.URL.revokeObjectURL(video.src)
+                if (video.duration < 1) {
+                    return
+                }
+                self.duration = video.duration
+            }
+            video.src = URL.createObjectURL(this.file.file)
         }
     },
     methods: {
@@ -244,15 +260,16 @@ Vue.component('file-component', {
 
         },
         createObject: function () {
-            var token =  $('input[name="csrfmiddlewaretoken"]').attr('value')
-            var self = this
+            let token =  $('input[name="csrfmiddlewaretoken"]').attr('value')
+            let self = this
             $.ajax({
                 type: 'POST',
                 contentType: "application/json",
                 url: '{{object_generator_url}}',
                 data: JSON.stringify({
                     "file_policy": self.signedPolicy,
-                    "title": self.title
+                    "title": self.title,
+                    "media_duration": self.duration
                 }),
                 headers: {
                     'X-CSRF-Token': token 
