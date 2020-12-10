@@ -117,7 +117,7 @@ Vue.component('file-component', {
             </td>
             <td v-if="!complete" class="start">
                 <!--<label>[[locale.fileupload.titleLabel]]</label>-->
-                <input type="text" name="title" :placeholder="locale.fileupload.titleLabel" v-model="title"/>
+                <input type="text" name="title" :placeholder="locale.fileupload.titleLabel" v-model="title" maxlength="140"/>
             </td>
             <td v-else colspan="2"></td>
             <td class="cancel" v-if="!complete">
