@@ -21,7 +21,6 @@
 {% endblock %}
 
 {% block extrastyle %}{{ block.super }}
-  <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}bootstrap/css/bootstrap.min.css" />
   <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}admin/css/forms.css" />
   <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}bootstrap/css/buttons.css" />
   <!-- Bootstrap Image Gallery styles -->
@@ -111,7 +110,7 @@ Vue.component('file-component', {
             <td v-if="error" class="error" colspan="2"><span class="label label-important">[[locale.fileupload.error]]</span> [[locale.fileupload.errors[error] || error]]</td>
             <td v-else-if="!complete">
                 <div class="progress progress-success progress-striped active file" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                    <div class="bar" :style="{width: percentComplete + '%'}"></div>
+                    <div class="progress-bar progress-bar-striped" :style="{width: percentComplete + '%'}"></div>
                     <div v-if="isCalculating"><p>Calculating...</p></div>
                 </div>
             </td>
