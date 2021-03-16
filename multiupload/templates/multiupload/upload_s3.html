@@ -64,7 +64,6 @@
 
 {% block content %}
 <div id="vue-app">
-    {% csrf_token %}
         <div class="row fileupload-buttonbar">
             <div class="span7">
                 <span class="btn-success fileinput-button btn">
@@ -191,10 +190,24 @@ Vue.component('file-component', {
         }
     },
     methods: {
+        getCookie: function (name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
         getPolicy: function () {
             if (this.complete || this.error) return
             let file = this.$props.file.file
-            let token =  $('input[name="csrfmiddlewaretoken"]').attr('value')
+            let csrftoken = this.getCookie('csrftoken')
             let self = this
             this.isCalculating = true
             $.ajax({
@@ -207,7 +220,7 @@ Vue.component('file-component', {
                     "file_size": file.size
                 }),
                 headers: {
-                    'X-CSRF-Token': token 
+                    'X-CSRFToken': csrftoken
                },
                success: function (data) {
                     self.signedPolicy = data
@@ -259,7 +272,7 @@ Vue.component('file-component', {
 
         },
         createObject: function () {
-            let token =  $('input[name="csrfmiddlewaretoken"]').attr('value')
+            let csrftoken = this.getCookie('csrftoken')
             let self = this
             $.ajax({
                 type: 'POST',
@@ -271,21 +284,21 @@ Vue.component('file-component', {
                     "media_duration": self.duration
                 }),
                 headers: {
-                    'X-CSRF-Token': token 
-               },
-               success: function (data) {
-                    self.inProgress = false
-                    self.complete = true
-                    self.creationResult = data
-               },
-               error: function (data) {
-                   if (data.responseText) {
-                       let error = JSON.parse(data.responseText)
-                       self.error = error.error
-                   }else{
-                    self.error = 'policyError'
-                   }
-               }
+                    'X-CSRFToken': csrftoken
+                },
+                success: function (data) {
+                        self.inProgress = false
+                        self.complete = true
+                        self.creationResult = data
+                },
+                error: function (data) {
+                    if (data.responseText) {
+                        let error = JSON.parse(data.responseText)
+                        self.error = error.error
+                    }else{
+                        self.error = 'policyError'
+                    }
+                }
             })
         },
         humanFileSize: function (bytes, si=false, dp=1) {
